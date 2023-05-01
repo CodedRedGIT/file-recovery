@@ -31,7 +31,6 @@ int BlockRecovery::findFirstBlockOfType(int usb_fd, const std::string &fileTypeS
         blockNumber++;
     }
 
-    // Check the last block
     if (bytesRead > 0)
     {
         const char *match = std::search(buffer, buffer + bytesRead, fileTypeSignature.begin(), fileTypeSignature.end());
@@ -65,7 +64,6 @@ std::vector<int> BlockRecovery::findDirectBlocks(int usb_fd, int startBlock, int
     char buffer[blockSize];
     ssize_t bytesRead;
 
-    // Read and write the data for the next numDirectBlocks blocks (direct blocks)
     for (int i = 0; i < numDirectBlocks; ++i)
     {
         bytesRead = readBlock(usb_fd, startBlock + i, buffer, blockSize);
@@ -89,11 +87,11 @@ std::vector<int> BlockRecovery::findDirectBlocks(int usb_fd, int startBlock, int
         directBlocks.push_back(startBlock + i);
 
         std::cout << "Block data read and written for block number " << startBlock + i << "\n";
-        std::cout.flush(); // Flush standard output
+        std::cout.flush();
     }
 
     std::cout << "Direct blocks identified: " << directBlocks.size() << "\n";
-    std::cout.flush(); // Flush standard output
+    std::cout.flush();
 
     return directBlocks;
 }
@@ -114,7 +112,7 @@ int BlockRecovery::findIndirectBlock(int usb_fd, int startBlock, int blockSize, 
 {
     const int bufferSize = 4096;
     char buffer[bufferSize];
-    int blockNumber = startBlock - 10000; // Initialize blockNumber as 0
+    int blockNumber = startBlock - 10000;
     int bytesRead = 0;
 
     unsigned char targetBytesValue[4];
@@ -155,8 +153,6 @@ std::vector<int> BlockRecovery::findDoubleIndirectBlocks(int usb_fd, int doubleI
     int bytesRead = 0;
     int blockCount = blockSize / sizeof(int);
 
-    std::cout << "DOUBLE INDIRECT: " << doubleIndirectBlockNumber << std::endl;
-
     std::vector<int> directBlockNumbers;
     if (lseek(usb_fd, doubleIndirectBlockNumber * blockSize, SEEK_SET) == -1)
     {
@@ -167,19 +163,21 @@ std::vector<int> BlockRecovery::findDoubleIndirectBlocks(int usb_fd, int doubleI
     bytesRead = read(usb_fd, buffer, bufferSize);
     if (bytesRead == -1)
     {
-        std::cerr << "123---Error reading double indirect block number " << doubleIndirectBlockNumber << std::endl;
+        std::cerr << "Error reading double indirect block number " << doubleIndirectBlockNumber << std::endl;
         exit(1);
     }
 
     int doubleIndirectBlockNumbers[blockCount];
     memcpy(doubleIndirectBlockNumbers, buffer, bytesRead);
+    bool noTripleIndrectBlocks = false;
 
     for (int i = 0; i < blockCount; ++i)
     {
         int indirectBlockNumber = doubleIndirectBlockNumbers[i];
         if (indirectBlockNumber == 0)
         {
-            continue; // Skip if the indirect block number is 0
+            noTripleIndrectBlocks = true;
+            continue;
         }
 
         if (lseek(usb_fd, indirectBlockNumber * blockSize, SEEK_SET) == -1)
@@ -203,12 +201,14 @@ std::vector<int> BlockRecovery::findDoubleIndirectBlocks(int usb_fd, int doubleI
             int directBlockNumber = indirectBlockNumbers[j];
             if (directBlockNumber == 0)
             {
-                continue; // Skip if the direct block number is 0
+                continue;
             }
 
             directBlockNumbers.push_back(directBlockNumber);
         }
     }
+    if (noTripleIndrectBlocks)
+        directBlockNumbers.push_back(0);
 
     return directBlockNumbers;
 }
@@ -253,12 +253,11 @@ std::vector<int> BlockRecovery::findTripleIndirectBlocks(int usb_fd, int tripleI
         int doubleIndirectBlockNumber = tripleIndirectBlockNumbers[i];
         if (doubleIndirectBlockNumber == 0)
         {
-            continue; // Skip if the double indirect block number is 0
+            continue;
         }
 
         std::vector<int> doubleIndirectBlocks = findDoubleIndirectBlocks(usb_fd, doubleIndirectBlockNumber, blockSize);
 
-        // Append the direct block numbers from the double indirect blocks
         directBlockNumbers.insert(directBlockNumbers.end(), doubleIndirectBlocks.begin(), doubleIndirectBlocks.end());
     }
 

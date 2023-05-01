@@ -102,14 +102,10 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
             writeBlock(out_fd, buffer, 4096);
         }
 
+        // Get and write double indirect blocks
         if (directBlockNumbers[directBlockNumbers.size() - 1] != 0)
         {
             std::vector<int> indirectBlocks = BlockRecovery::findDoubleIndirectBlocks(usb_fd, indirectBlock + 1, 4096);
-            std::cout << "Indirect Blocks:" << std::endl;
-            for (int block : indirectBlocks)
-            {
-                std::cout << block << std::endl;
-            }
             for (int i = 0; i < indirectBlocks.size(); ++i)
             {
                 int block = indirectBlocks[i];
@@ -127,6 +123,32 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
                     exit(1);
                 }
                 writeBlock(out_fd, buffer, 4096);
+            }
+
+            // Write the triple indirect blocks
+            if (indirectBlocks.back() != 0)
+            {
+                std::vector<int> tripleIndirectBlocks = BlockRecovery::findTripleIndirectBlocks(usb_fd, indirectBlocks.back() + 1, blockSize);
+                std::cout << "Triple Indirect Blocks:" << std::endl;
+                for (int block : tripleIndirectBlocks)
+                {
+                    std::cout << block << std::endl;
+                }
+                for (int i = 0; i < tripleIndirectBlocks.size(); ++i)
+                {
+                    int block = tripleIndirectBlocks[i];
+
+                    if (block == 0)
+                        continue;
+
+                    ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096);
+                    if (bytesRead < 0)
+                    {
+                        std::cerr << "Failed to read direct block " << block << " from USB device.\n";
+                        exit(1);
+                    }
+                    writeBlock(out_fd, buffer, 4096);
+                }
             }
         }
     }
@@ -151,7 +173,7 @@ bool setFilePermissions(const std::string &filePath)
 
 int main()
 {
-    bool inProduction = true;
+    bool inProduction = false;
 
     std::string usbDevicePath;
     std::string outputPath;

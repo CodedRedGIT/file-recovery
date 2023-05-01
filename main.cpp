@@ -38,24 +38,6 @@ int openOutputFile(const std::string &outputPath)
     return out_fd;
 }
 
-// Determine the file size from the file blocks
-off_t determineFileSize(const std::vector<int> &fileBlocks, int blockSize, int usb_fd)
-{
-    off_t fileSize = (fileBlocks.size() - 1) * blockSize;
-
-    int lastBlock = fileBlocks.back();
-    struct statvfs vfs;
-    if (fstatvfs(usb_fd, &vfs) != 0)
-    {
-        std::cerr << "Failed to get file system information.\n";
-        exit(1);
-    }
-    off_t lastBlockSize = vfs.f_frsize;
-    fileSize += lastBlockSize;
-
-    return fileSize;
-}
-
 // Function to recover the file from the USB device
 void recoverFile(const std::string &usbDevicePath, const std::string &outputPath, const std::string &fileTypeSignature)
 {
@@ -69,7 +51,7 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
     std::cout << "Found!\n";
 
     std::cout << "Looking for direct blocks...\n";
-    std::vector<int> directBlocks = BlockRecovery::findDirectBlocks(usb_fd, startBlock, 4096, 12); // Block size is set to 4096
+    std::vector<int> directBlocks = BlockRecovery::findDirectBlocks(usb_fd, startBlock, 4096, 12);
     std::cout << "Found!\n";
 
     std::cout << "Looking for indirect block...\n";
@@ -82,7 +64,7 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
     else
         std::cout << "Not Found!\n";
 
-    char buffer[4096]; // Block size is set to 4096
+    char buffer[4096];
 
     // Write the direct blocks to the output file
     for (int i = 0; i < directBlocks.size(); ++i)
@@ -92,14 +74,13 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
         std::cout.flush(); // Flush standard output
 
         // Read the direct block
-        ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096); // Block size is set to 4096
+        ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096); //
         if (bytesRead < 0)
         {
             std::cerr << "Failed to read direct block " << block << " from USB device.\n";
             exit(1);
         }
 
-        // Write the direct block to the output file
         writeBlock(out_fd, buffer, 4096);
     }
 
@@ -155,15 +136,6 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
         directBlocks.insert(directBlocks.end(), indirectBlocks.begin(), indirectBlocks.end());
     }
 
-    off_t fileSize = determineFileSize(directBlocks, 4096, usb_fd);
-
-    // Set the file size on the output file
-    if (ftruncate(out_fd, fileSize) != 0)
-    {
-        std::cerr << "Failed to set file size on output file.\n";
-        exit(1);
-    }
-
     std::cout << "File recovery completed.\n";
     std::cout.flush();
 
@@ -185,31 +157,6 @@ int main()
 
     std::cout << "File recovery started.\n";
     recoverFile(usbDevicePath, outputPath, fileTypeSignature);
-
-    std::string zipPath = "/home/codedred/Desktop/FinalProject/text.zip";
-
-    // Open the input (outputPath) and output (zipPath) files
-    std::ifstream inputFile(outputPath, std::ios::binary);
-    std::ofstream outputFile(zipPath, std::ios::app); // Open in append mode
-
-    if (!inputFile)
-    {
-        std::cerr << "Failed to open the input file.\n";
-        return 1;
-    }
-
-    if (!outputFile)
-    {
-        std::cerr << "Failed to open the output file.\n";
-        return 1;
-    }
-
-    // Copy the contents from the input file to the output file
-    outputFile << inputFile.rdbuf();
-
-    // Close the input and output files
-    inputFile.close();
-    outputFile.close();
 
     std::cout << "File copying completed.\n";
     return 0;

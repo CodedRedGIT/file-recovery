@@ -24,7 +24,6 @@ int BlockRecovery::findFirstBlockOfType(int usb_fd, const std::string &fileTypeS
     {
         if (memcmp(buffer, fileTypeSignature.c_str(), fileTypeSignature.size()) == 0)
         {
-            std::cerr << "Block = " << blockNumber << ".\n";
             return blockNumber;
         }
 
@@ -38,7 +37,6 @@ int BlockRecovery::findFirstBlockOfType(int usb_fd, const std::string &fileTypeS
         {
             int position = match - buffer;
             int foundBlock = blockNumber + (position / bufferSize);
-            std::cerr << "Block = " << foundBlock << ".\n";
             return foundBlock;
         }
     }
@@ -85,13 +83,7 @@ std::vector<int> BlockRecovery::findDirectBlocks(int usb_fd, int startBlock, int
         }
 
         directBlocks.push_back(startBlock + i);
-
-        std::cout << "Block data read and written for block number " << startBlock + i << "\n";
-        std::cout.flush();
     }
-
-    std::cout << "Direct blocks identified: " << directBlocks.size() << "\n";
-    std::cout.flush();
 
     return directBlocks;
 }
@@ -125,7 +117,6 @@ int BlockRecovery::findIndirectBlock(int usb_fd, int startBlock, int blockSize, 
     {
         if (memcmp(buffer, targetBytesValue, sizeof(targetBytesValue)) == 0)
         {
-            std::cout << "Block found at block number " << blockNumber << std::endl;
             return blockNumber;
         }
 

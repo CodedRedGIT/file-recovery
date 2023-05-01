@@ -47,22 +47,19 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
     int out_fd = openOutputFile(outputPath);
 
     const unsigned char *signature = reinterpret_cast<const unsigned char *>(fileTypeSignature.c_str());
-    std::cout << "Looking for first block...\n";
     int startBlock = BlockRecovery::findFirstBlockOfType(usb_fd, fileTypeSignature);
-    std::cout << "Found!\n";
+    // std::cout << "[START BLOCK] = " << startBlock << "\n";
 
-    std::cout << "Looking for direct blocks...\n";
     std::vector<int> directBlocks = BlockRecovery::findDirectBlocks(usb_fd, startBlock, 4096, 12);
-    std::cout << "Found!\n";
 
     // Write the direct blocks to the output file
     for (int i = 0; i < directBlocks.size(); ++i)
     {
         int block = directBlocks[i];
-        std::cout << "Processing direct block " << block << " (" << i + 1 << "/" << directBlocks.size() << ")\n";
+        std::cout << "\ti_block[" << i << "] = " << block << "\n";
         std::cout.flush();
 
-        ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096); //
+        ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096);
         if (bytesRead < 0)
         {
             std::cerr << "Failed to read direct block " << block << " from USB device.\n";
@@ -76,9 +73,8 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
     int indirectBlock;
     if (directBlocks.size() == 12 && directBlocks.back() != '0')
     {
-        std::cout << "Looking for indirect block...\n";
         indirectBlock = BlockRecovery::findIndirectBlock(usb_fd, startBlock, blockSize, directBlocks.back() + 1);
-        std::cout << "Found!\n";
+        std::cout << "\ti_block[12] = " << indirectBlock << "\n";
 
         std::vector<int> directBlockNumbers = BlockRecovery::getBlockNumbersFromIndirect(usb_fd, indirectBlock, blockSize);
 
@@ -88,10 +84,7 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
             int block = directBlockNumbers[i];
 
             if (block == 0)
-                continue; // Skip processing if blockNumber is 0
-
-            // std::cout << "Processing indirect block " << block << " (" << i + 1 << "/" << directBlockNumbers.size() << ")\n";
-            std::cout.flush();
+                continue;
 
             ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096);
             if (bytesRead < 0)
@@ -105,16 +98,14 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
         // Get and write double indirect blocks
         if (directBlockNumbers[directBlockNumbers.size() - 1] != 0)
         {
+            std::cout << "\ti_block[13] = " << (indirectBlock + 1) << "\n";
             std::vector<int> indirectBlocks = BlockRecovery::findDoubleIndirectBlocks(usb_fd, indirectBlock + 1, 4096);
             for (int i = 0; i < indirectBlocks.size(); ++i)
             {
                 int block = indirectBlocks[i];
 
                 if (block == 0)
-                    continue; // Skip processing if blockNumber is 0
-
-                // std::cout << "Processing indirect block " << block << " (" << i + 1 << "/" << directBlockNumbers.size() << ")\n";
-                std::cout.flush();
+                    continue;
 
                 ssize_t bytesRead = readBlock(usb_fd, block, buffer, 4096);
                 if (bytesRead < 0)
@@ -128,12 +119,9 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
             // Write the triple indirect blocks
             if (indirectBlocks.back() != 0)
             {
+                std::cout << "\ti_block[14] = " << (indirectBlock + 2) << "\n";
                 std::vector<int> tripleIndirectBlocks = BlockRecovery::findTripleIndirectBlocks(usb_fd, indirectBlocks.back() + 1, blockSize);
-                std::cout << "Triple Indirect Blocks:" << std::endl;
-                for (int block : tripleIndirectBlocks)
-                {
-                    std::cout << block << std::endl;
-                }
+
                 for (int i = 0; i < tripleIndirectBlocks.size(); ++i)
                 {
                     int block = tripleIndirectBlocks[i];
@@ -150,11 +138,18 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
                     writeBlock(out_fd, buffer, 4096);
                 }
             }
+            else
+                std::cout << "\ti_block[14] = 0\n";
         }
+        else
+            std::cout << "\ti_block[13] = 0\n";
     }
-
-    std::cout << "File recovery completed.\n";
-    std::cout.flush();
+    else
+    {
+        std::cout << "\ti_block[12] = 0\n";
+        std::cout << "\ti_block[13] = 0\n";
+        std::cout << "\ti_block[14] = 0\n";
+    }
 
     close(usb_fd);
     close(out_fd);
@@ -194,12 +189,12 @@ int main()
 
     std::string fileTypeSignature = "\x50\x4B\x03\x04";
 
-    std::cout << "File recovery started.\n";
+    std::cout << "File recovery started.\n\n";
     recoverFile(usbDevicePath, outputPath, fileTypeSignature);
 
     if (setFilePermissions(outputPath))
     {
-        std::cout << "File permissions set successfully." << std::endl;
+        std::cout << "\n\nFile permissions set successfully." << std::endl;
     }
 
     std::cout << "File copying completed.\n";

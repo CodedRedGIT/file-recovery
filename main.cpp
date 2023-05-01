@@ -151,8 +151,26 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
 
 int main()
 {
-    std::string usbDevicePath = "/dev/sdc";
-    std::string outputPath = "/home/codedred/Desktop/FinalProject/outfile.pptx";
+    bool inProduction = true;
+
+    std::string usbDevicePath;
+    std::string outputPath;
+
+    if (inProduction)
+    {
+        std::cout << "Enter the USB device path: ";
+        std::getline(std::cin, usbDevicePath);
+
+        std::cout << "Enter the output file path: ";
+        std::getline(std::cin, outputPath);
+    }
+    else
+    {
+        // Default paths for testing purposes
+        usbDevicePath = "/dev/sdc";
+        outputPath = "/home/codedred/Desktop/FinalProject/outfile.pptx";
+    }
+
     std::string fileTypeSignature = "\x50\x4B\x03\x04";
 
     std::cout << "File recovery started.\n";

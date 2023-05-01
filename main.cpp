@@ -139,14 +139,19 @@ void recoverFile(const std::string &usbDevicePath, const std::string &outputPath
     std::cout << "File recovery completed.\n";
     std::cout.flush();
 
-    if (chmod(outputPath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH) != 0)
-    {
-        std::cerr << "Failed to change file permissions.\n";
-        exit(1);
-    }
-
     close(usb_fd);
     close(out_fd);
+}
+
+bool setFilePermissions(const std::string &filePath)
+{
+    int result = chmod(filePath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH);
+    if (result != 0)
+    {
+        std::cerr << "Failed to set file permissions for: " << filePath << std::endl;
+        return false;
+    }
+    return true;
 }
 
 int main()
@@ -166,7 +171,6 @@ int main()
     }
     else
     {
-        // Default paths for testing purposes
         usbDevicePath = "/dev/sdc";
         outputPath = "/home/codedred/Desktop/FinalProject/outfile.pptx";
     }
@@ -175,6 +179,11 @@ int main()
 
     std::cout << "File recovery started.\n";
     recoverFile(usbDevicePath, outputPath, fileTypeSignature);
+
+    if (setFilePermissions(outputPath))
+    {
+        std::cout << "File permissions set successfully." << std::endl;
+    }
 
     std::cout << "File copying completed.\n";
     return 0;

@@ -66,7 +66,6 @@ std::vector<int> BlockRecovery::findDirectBlocks(int usb_fd, int startBlock, int
     {
         bytesRead = readBlock(usb_fd, startBlock + i, buffer, blockSize);
 
-        // Check if any non-zero byte is present in the block
         bool isEmpty = true;
         for (int j = 0; j < bytesRead; ++j)
         {
@@ -79,7 +78,7 @@ std::vector<int> BlockRecovery::findDirectBlocks(int usb_fd, int startBlock, int
 
         if (isEmpty)
         {
-            break; // Stop reading further blocks if the block is empty
+            break;
         }
 
         directBlocks.push_back(startBlock + i);
@@ -160,15 +159,15 @@ std::vector<int> BlockRecovery::findDoubleIndirectBlocks(int usb_fd, int doubleI
 
     int doubleIndirectBlockNumbers[blockCount];
     memcpy(doubleIndirectBlockNumbers, buffer, bytesRead);
-    bool noTripleIndrectBlocks = false;
+    bool noTripleIndirectBlocks = false;
 
     for (int i = 0; i < blockCount; ++i)
     {
         int indirectBlockNumber = doubleIndirectBlockNumbers[i];
         if (indirectBlockNumber == 0)
         {
-            noTripleIndrectBlocks = true;
-            continue;
+            noTripleIndirectBlocks = true;
+            break;
         }
 
         if (lseek(usb_fd, indirectBlockNumber * blockSize, SEEK_SET) == -1)
@@ -192,13 +191,12 @@ std::vector<int> BlockRecovery::findDoubleIndirectBlocks(int usb_fd, int doubleI
             int directBlockNumber = indirectBlockNumbers[j];
             if (directBlockNumber == 0)
             {
-                continue;
+                break;
             }
-
             directBlockNumbers.push_back(directBlockNumber);
         }
     }
-    if (noTripleIndrectBlocks)
+    if (noTripleIndirectBlocks)
         directBlockNumbers.push_back(0);
 
     return directBlockNumbers;
@@ -244,7 +242,8 @@ std::vector<int> BlockRecovery::findTripleIndirectBlocks(int usb_fd, int tripleI
         int doubleIndirectBlockNumber = tripleIndirectBlockNumbers[i];
         if (doubleIndirectBlockNumber == 0)
         {
-            continue;
+            break;
+            ;
         }
 
         std::vector<int> doubleIndirectBlocks = findDoubleIndirectBlocks(usb_fd, doubleIndirectBlockNumber, blockSize);

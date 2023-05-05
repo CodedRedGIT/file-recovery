@@ -103,7 +103,7 @@ int BlockRecovery::findIndirectBlock(int usb_fd, int startBlock, int blockSize, 
 {
     const int bufferSize = 4096;
     char buffer[bufferSize];
-    int blockNumber = startBlock - 10000;
+    int blockNumber = 0;
     int bytesRead = 0;
 
     unsigned char targetBytesValue[4];

@@ -14,6 +14,8 @@ The process of recovering deleted files involves examining the blocks of data on
 ## Implementation
 Block-level analysis is a technique used in the File Recovery project to recover deleted files from a USB device. This section provides an overview of the different types of blocks used in the analysis: direct blocks, indirect blocks, double indirect blocks, and triple indirect blocks.
 
+![blocks](/assets/blocks.png)
+
 ### Direct Blocks
 In a file system, data is stored in fixed-size blocks or sectors. Direct blocks refer to the data blocks that contain the actual content of a file. Each file has a limited number of direct blocks that store its data. When a file is deleted, the corresponding direct blocks are marked as free space, but the actual data remains intact until overwritten by new files.
 
@@ -35,6 +37,8 @@ In cases where the file size surpasses the limit of a double indirect block, the
 During the analysis, if a deleted file is discovered to have a triple indirect block, the project recursively follows the block addresses in the triple indirect block to retrieve the double indirect blocks, indirect blocks, and data blocks. The project continues the file reconstruction process using the data obtained from these blocks.
 
 By employing block-level analysis and traversing through direct blocks, indirect blocks, double indirect blocks, and triple indirect blocks, the File Recovery project aims to reconstruct and recover deleted files from the specified partition.
+
+![image looks better in light mode - sorry](/assets/block-design.png)
 
 ## File Signatures and Identification
 File signatures, also known as magic numbers or file headers, are unique patterns of bytes located at the beginning of a file. They serve as a distinctive identifier for specific file types. During the block-level analysis, the File Recovery project relies on these file signatures to identify and recover .pptx files.
